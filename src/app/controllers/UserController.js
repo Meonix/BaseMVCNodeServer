@@ -7,14 +7,14 @@ class UserController{
             if (!userFullData) {
                 return res.status(401).json({data: null,error: 'Login failed! Check authentication credentials'})
             }
-            const token = await userFullData.generateAuthToken();
-            const user = {
+            const sessionInfo = await userFullData.generateAuthToken();
+            const userInfo = {
                 _id:userFullData._id,
                 name:userFullData.name,
                 email:userFullData.email,
+                sessionInfo: sessionInfo
             }
-            // res.status(200).send({ user, token });
-            res.status(200).json({data:{user:user,token:token},error:""})
+            res.status(200).json({data: userInfo,error:""})
         } catch (error) {
             res.status(400).json({data:null,error:error});
         }
@@ -31,8 +31,19 @@ class UserController{
             else{
                 const user = new User(req.body)
                 await user.save()
-                const token = await user.generateAuthToken()
-                res.status(201).json({ data:{user:user, token:token},error: "" })
+                const sessionInfo = await user.generateAuthToken()
+                res.status(201).json(
+                    { 
+                        data:
+                        {
+                            name:user.name,
+                            email:user.email,
+                            _id:user.id,
+                            sessionInfo: sessionInfo 
+                        },
+                        error: "" 
+                    }
+                )
             }
 
         } catch (error) {
@@ -49,11 +60,11 @@ class UserController{
     async logout(req, res){
         // Log user out of the application
         try {
-            req.user.tokens = req.user.tokens.filter((token) => {
-                return token.token != req.token;
+            req.user.sessionInfo = req.user.sessionInfo.filter((sessionInfo) => {
+                return sessionInfo._id != req.sessionId;
             });
             await req.user.save();
-            res.status(200).json({ data:"succcess",error: null})
+            res.status(200).json({data:"succcess",error: null})
         } catch (error) {
             res.status(500).json({data:null,error:error})
         }

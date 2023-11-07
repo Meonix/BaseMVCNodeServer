@@ -4,6 +4,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
 const JWT_KEY = process.env.SECRETKEY;
+const TOKEN_LIFE = process.env.TOKEN_LIFE;
+const REFRESH_TOKEN_LIFE = process.env.REFRESH_TOKEN_LIFE;
+
 
 const UserSchema = new Schema({
     name:{type:String,required:true},
@@ -18,8 +21,16 @@ const UserSchema = new Schema({
             }
     },
     password: {type:String,required:true,minLength: 7},
-    tokens: [{
-      token: {
+    sessionInfo: [{
+      deviceName:{
+        type: String,
+        required: false
+      },
+      refreshToken:{
+        type: String,
+        required: true
+      },
+      accessToken: {
           type: String,
           required: true
       }
@@ -38,12 +49,18 @@ const UserSchema = new Schema({
       next();
   });
   UserSchema.methods.generateAuthToken = async function() {
-      // Generate an auth token for the user
+      // Generate an access token and refresh token for the user
       const user = this
-      const token = jwt.sign({_id: user._id}, JWT_KEY)
-      user.tokens = user.tokens.concat({token})
+      const accessToken = jwt.sign({_id: user._id}, JWT_KEY,{expiresIn: TOKEN_LIFE});
+      const refreshToken = jwt.sign({_id: user._id}, JWT_KEY,{expiresIn: REFRESH_TOKEN_LIFE});
+      const sessionInfo = {
+        deviceName:"",
+        refreshToken: refreshToken,
+        accessToken: accessToken,
+      }
+      user.sessionInfo.push(sessionInfo)
       await user.save()
-      return token
+      return user.sessionInfo[user.sessionInfo.length-1]
   }
 
   UserSchema.statics.findEmailAvailable = async (email) => {
