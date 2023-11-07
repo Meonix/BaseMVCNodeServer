@@ -63,6 +63,17 @@ const UserSchema = new Schema({
       return user.sessionInfo[user.sessionInfo.length-1]
   }
 
+  UserSchema.methods.generateAcessToken = async function(sessionId) {
+      // Generate an access token and refresh token for the user
+      const user = this
+      const accessToken = jwt.sign({_id: user._id}, JWT_KEY,{expiresIn: TOKEN_LIFE});
+      const foundIndex =  user.sessionInfo.findIndex(item => item._id.toString() == sessionId);
+      user.sessionInfo[foundIndex].accessToken = accessToken;
+      await user.save();
+      return user.sessionInfo[foundIndex];
+  }
+
+
   UserSchema.statics.findEmailAvailable = async (email) => {
         const available = await User.findOne({email})
         if(available){

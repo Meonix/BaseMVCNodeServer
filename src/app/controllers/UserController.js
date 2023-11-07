@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const JWT_KEY = process.env.SECRETKEY;
+const jwt = require('jsonwebtoken');
 class UserController{
     async getUser(req,res,next){
         try {
@@ -19,6 +21,41 @@ class UserController{
             res.status(400).json({data:null,error:error});
         }
         next()
+    }
+
+    async refreshToken(req,res,next){
+        try {
+            const refreshToken = req.header(`X-${process.env.SECRETKEY}-api`);
+            const sessionId = req.header("Session-id");
+            
+            const data = jwt.verify(refreshToken,JWT_KEY , function(err, decoded) {
+                if (err) {
+                    // call api logout at client when receive this error (refresh token was expired)
+                    const error = new Error()
+                    error.message = "Refresh token was expired"
+                    throw error;
+                }
+            });  
+
+            const user = await User.findOne({ _id: data._id, 'sessionInfo.refreshToken': refreshToken });
+            if (!user) {
+                res.status(401).json({data:null,error: 'user not found'});
+                return;
+            }
+
+            const sessionInfo = await user.generateAcessToken(sessionId);
+            const userInfo = {
+                _id:user._id,
+                name:user.name,
+                email:user.email,
+                sessionInfo: sessionInfo
+            }
+            res.status(200).json({data: userInfo,error:""})
+        } catch (error) {
+            console.log(error)
+            res.status(400).json({data:null,error:error});
+        }
+        next();
     }
 
 

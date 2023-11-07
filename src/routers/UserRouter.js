@@ -30,6 +30,8 @@ router.post('/create_user',
 //GET METHOD TO GET USER'S PROFILE
 router.get('/profile', auth,userController.profile);
 
+router.post('/refresh_token', userController.refreshToken);
+
 //auth params is the middleware to check user by token and get user info
 
 //POST METHOD TO LOGOUT
